@@ -83,14 +83,16 @@
     label.textContent = checkbox.checked ? 'с НДС' : 'без НДС';
   }
 
-  function getToken() { 
-    return localStorage.getItem('price_admin_token') || ''; 
+function getToken() { 
+    // Сначала ищем общий токен, если нет — старый или из тендеров
+    return localStorage.getItem('crm_github_token') || localStorage.getItem('gh_pat_token') || localStorage.getItem('price_admin_token') || ''; 
   }
 
   function saveToken() {
     const token = document.getElementById('gh-token').value.trim();
     if (token) {
-      localStorage.setItem('price_admin_token', token);
+      localStorage.setItem('crm_github_token', token);
+      localStorage.setItem('gh_pat_token', token); // Синхронизируем для тендеров
       initAdmin();
     } else {
       alert('Пожалуйста, введите токен');
