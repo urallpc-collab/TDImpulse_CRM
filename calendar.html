@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow, noarchive">
   <title>Календарь и Заметки — ТД Импульс CRM</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -118,33 +119,30 @@
   let currentDate = new Date();
   let selectedDate = new Date();
 
-  // Инициализация календаря
-  function renderCalendar() {
+function renderCalendar() {
     const grid = document.getElementById('calendar-days-grid');
     grid.innerHTML = '';
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    // Название месяца
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
     document.getElementById('calendar-month-year').innerText = `${monthNames[month]} ${year}`;
 
-    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Понедельник = 0
+    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
     const totalDays = new Date(year, month + 1, 0).getDate();
 
-    // Пустые ячейки для смещения начала месяца
     for (let i = 0; i < firstDayIndex; i++) {
-      grid.innerHTML += `<div class="h-10 opacity-0"></div>`;
+      grid.innerHTML += `<div class="aspect-square opacity-0"></div>`;
     }
 
-    // Дни месяца
     const today = new Date();
     for (let day = 1; day <= totalDays; day++) {
       const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
       const isSelected = day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
 
-      let classes = "h-11 rounded-xl font-bold text-xs flex flex-col items-center justify-center cursor-pointer transition relative ";
+      // aspect-square делает ячейки идеально квадратными на любом экране
+      let classes = "aspect-square rounded-xl font-bold text-sm sm:text-xs flex flex-col items-center justify-center cursor-pointer transition relative ";
       
       if (isSelected) {
         classes += "bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ";
@@ -157,8 +155,7 @@
       grid.innerHTML += `
         <button onclick="selectDay(${day})" class="${classes}">
           ${day}
-          <!-- Метка, если на день есть заметки -->
-          ${(day === 21 || day === 28) ? '<span class="w-1.5 h-1.5 rounded-full bg-blue-400 absolute bottom-1"></span>' : ''}
+          ${(day === 21 || day === 28) ? '<span class="w-1.5 h-1.5 rounded-full bg-blue-400 absolute bottom-1.5"></span>' : ''}
         </button>
       `;
     }
