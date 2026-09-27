@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Панель Управления — ТД Импульс CRM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 font-sans">
+
+  <div class="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+    
+    <!-- Шапка CRM (адаптирована под мобильные) -->
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 sm:pb-6 gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xl shrink-0">
+          ⚡
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-wide flex items-center gap-2 flex-wrap">
+            ТД ИМПУЛЬС 
+            <span class="text-xs font-normal text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-800">CRM v1.0</span>
+          </h1>
+          <p class="text-xs text-slate-400">Единый центр управления бизнес-процессами</p>
+        </div>
+      </div>
+      <div class="text-left sm:text-right w-full sm:w-auto flex justify-between sm:block border-t sm:border-0 border-slate-800/80 pt-3 sm:pt-0">
+        <span class="text-xs text-slate-400 block">Профиль: <strong class="text-slate-200">urallpc-collab</strong></span>
+        <span class="inline-flex items-center gap-1.5 text-[10px] text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> GitHub API Active
+        </span>
+      </div>
+    </header>
+
+    <!-- Сетка модулей CRM: 1 колонка на смартфонах, 2 на планшетах, 3 на ПК -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+
+      <!-- Модуль 1: Тендерный отдел -->
+      <a href="Tenders.html" class="group bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5 flex flex-col justify-between active:scale-[0.98]">
+        <div>
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400">
+              <i class="fa-solid fa-gavel text-xl"></i>
+            </div>
+            <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg">Projects v2</span>
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-emerald-400 transition">Тендерный Отдел</h3>
+          <p class="text-xs text-slate-400 mt-2 leading-relaxed">Мониторинг торгов, первичная оценка, просчет заявок и отслеживание статусов 223/44-ФЗ.</p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-400">
+          <span>Перейти</span>
+          <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition text-emerald-400"></i>
+        </div>
+      </a>
+
+      <!-- Модуль 2: Управление сайтом и ценами -->
+      <a href="admin-prices.html" class="group bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5 flex flex-col justify-between active:scale-[0.98]">
+        <div>
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+              <i class="fa-solid fa-tags text-xl"></i>
+            </div>
+            <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg">Каталог</span>
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-emerald-400 transition">Прайс-лист и Сайт</h3>
+          <p class="text-xs text-slate-400 mt-2 leading-relaxed">Быстрое изменение цен на химическую продукцию (Натр едкий, Сода) без доступа к коду.</p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-400">
+          <span>Открыть Редактор</span>
+          <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition text-emerald-400"></i>
+        </div>
+      </a>
+
+      <!-- Модуль 3: Календарь и Заметки -->
+      <a href="calendar.html" class="group bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5 flex flex-col justify-between active:scale-[0.98]">
+        <div>
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400">
+              <i class="fa-regular fa-calendar-check text-xl"></i>
+            </div>
+            <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg">Планировщик</span>
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-emerald-400 transition">Календарь и Заметки</h3>
+          <p class="text-xs text-slate-400 mt-2 leading-relaxed">Личный план задач на день, планирование отгрузок и общий календарь событий компании.</p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-400">
+          <span>Открыть Календарь</span>
+          <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition text-emerald-400"></i>
+        </div>
+      </a>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

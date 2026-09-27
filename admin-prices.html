@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Управление ценами — ТД Импульс</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    /* Отключаем стрелки у полей ввода чисел */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-3 sm:p-4 md:p-8 font-sans">
+
+  <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+    
+    <!-- Шапка -->
+    <header class="flex justify-between items-center border-b border-slate-800 pb-3 sm:pb-4">
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <a href="index.html" class="p-2 sm:p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:border-emerald-500/50 text-slate-400 hover:text-emerald-400 transition">
+          <i class="fa-solid fa-arrow-left text-sm sm:text-base"></i>
+        </a>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold text-slate-100">Управление ценами</h1>
+          <p class="text-[11px] sm:text-xs text-slate-400">ООО «Торговый Дом Импульс»</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Форма авторизации (токен) -->
+    <div id="auth-card" class="bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-xl max-w-md mx-auto hidden">
+      <h2 class="text-sm font-semibold mb-2 flex items-center gap-2">
+        <i class="fa-solid fa-key text-emerald-400"></i> Авторизация GitHub API
+      </h2>
+      <p class="text-xs text-slate-400 mb-4">Введите ваш Personal Access Token (PAT):</p>
+      <input type="password" id="gh-token" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm mb-4 focus:outline-none focus:border-emerald-500 text-slate-200" placeholder="github_pat_xxxxxxxxxxxx">
+      <button onclick="saveToken()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm transition">
+        Сохранить ключ
+      </button>
+    </div>
+
+    <!-- Основное содержимое -->
+    <main id="app-content" class="hidden space-y-4 sm:space-y-6">
+
+      <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 gap-3">
+        <span class="text-xs text-slate-400 flex items-center"><i class="fa-solid fa-circle-info text-emerald-400 mr-1.5 shrink-0"></i> Данные каталога загружены</span>
+        <button onclick="saveAllPrices()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Опубликовать все цены
+        </button>
+      </div>
+
+      <!-- Контейнер карточек товаров -->
+      <div class="space-y-3 sm:space-y-4" id="products-list">
+        <div class="text-center text-slate-500 py-8 text-sm" id="loading-state">
+          <i class="fa-solid fa-spinner fa-spin mr-2"></i> Загрузка списка товаров из catalog.html...
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+<script>
+  const SITE_REPO_OWNER = 'TDImpulse';
+  const SITE_REPO_NAME = 'tdimpulse.github.io';
+
+  function validateMinPrice(input) {
+    let val = parseInt(input.value) || 0;
+    if (val < 100) input.value = 100;
+  }
+
+  function toggleVatLabel(checkbox) {
+    const label = checkbox.parentElement.querySelector('.vat-label');
+    label.textContent = checkbox.checked ? 'с НДС' : 'без НДС';
+  }
+
+  function getToken() { 
+    return localStorage.getItem('price_admin_token') || ''; 
+  }
+
+  function saveToken() {
+    const token = document.getElementById('gh-token').value.trim();
+    if (token) {
+      localStorage.setItem('price_admin_token', token);
+      initAdmin();
+    } else {
+      alert('Пожалуйста, введите токен');
+    }
+  }
+
+  // Загрузка catalog.html без API (напрямую)
+  async function fetchProductsFromCatalog() {
+    let htmlText = '';
+
+    const sources = [
+      'catalog.html?t=' + Date.now(),
+      'https://raw.githubusercontent.com/TDImpulse/tdimpulse.github.io/main/catalog.html',
+      'https://tdimpulse.ru/catalog.html'
+    ];
+
+    for (const url of sources) {
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          htmlText = await response.text();
+          if (htmlText) break;
+        }
+      } catch (e) {
+        console.warn(`Не удалось загрузить с ${url}`);
+      }
+    }
+
+    if (htmlText) {
+      try {
+        const match = htmlText.match(/(?:const|let|var)\s+(?:products|catalog|items|productsData)\s*=\s*(\[\s*[\s\S]*?\]);/i);
+        if (match && match[1]) {
+          return Function('"use strict";return (' + match[1] + ')')();
+        } else {
+          console.error('Массив товаров не найден в catalog.html');
+        }
+      } catch (e) {
+        console.error('Ошибка вычисления массива:', e);
+      }
+    }
+
+    return [];
+  }
+
+  // Чтение текущих цен из prices.json
+  async function fetchCurrentPrices() {
+    const timestamp = Date.now();
+    const sources = [
+      `https://tdimpulse.ru/prices.json?t=${timestamp}`,
+      `prices.json?t=${timestamp}`,
+      `https://raw.githubusercontent.com/TDImpulse/tdimpulse.github.io/main/prices.json?t=${timestamp}`
+    ];
+
+    for (const url of sources) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.warn(`Не удалось прочитать prices.json с ${url}`);
+      }
+    }
+
+    console.warn('prices.json не найден ни по одной ссылке, будут использованы базовые значения.');
+    return {};
+  }
+
+  async function initAdmin() {
+    const token = getToken();
+    if (!token) {
+      document.getElementById('auth-card').classList.remove('hidden');
+      document.getElementById('app-content').classList.add('hidden');
+      return;
+    }
+
+    document.getElementById('auth-card').classList.add('hidden');
+    document.getElementById('app-content').classList.remove('hidden');
+
+    const container = document.getElementById('products-list');
+
+    const [products, existingPrices] = await Promise.all([
+      fetchProductsFromCatalog(),
+      fetchCurrentPrices()
+    ]);
+
+    if (!products || products.length === 0) {
+      container.innerHTML = '<div class="text-center text-rose-400 py-8 text-sm">Не удалось извлечь товары из catalog.html.<br><span class="text-xs text-slate-500">Проверьте консоль браузера (F12)</span></div>';
+      return;
+    }
+
+    container.innerHTML = '';
+
+    products.forEach((prod, idx) => {
+      const cleanFileName = prod.url ? prod.url.replace(/^.*[\\\/]/, '') : `product_${idx}.html`;
+      const prodId = cleanFileName.replace('.html', '');
+      const fullWebUrl = `https://tdimpulse.ru/${cleanFileName}`;
+
+      const savedData = existingPrices[prodId] || {};
+      const priceVal = savedData.price || "";
+      const hasVat = savedData.vatIncluded !== undefined ? savedData.vatIncluded : true;
+
+      const cardHtml = `
+        <div class="p-4 sm:p-5 bg-slate-900 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4" data-product-id="${prodId}" data-product-url="${cleanFileName}">
+          <div class="border-b border-slate-800/60 pb-2.5">
+            <h3 class="text-base sm:text-lg font-bold text-slate-100 leading-snug">
+              <a href="${fullWebUrl}" target="_blank" class="hover:text-emerald-400 transition">
+                ${prod.title || 'Товар'}
+              </a>
+            </h3>
+            ${prod.standard ? `<div class="text-xs text-slate-400 font-normal mt-1">${prod.standard}</div>` : ''}
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-end">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5">Цена (руб/т)</label>
+              <input type="number" min="100" value="${priceVal}" onchange="validateMinPrice(this)" class="price-input w-full p-3 sm:p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-base sm:text-sm font-semibold text-emerald-400 focus:outline-none focus:border-emerald-500" placeholder="Укажите цену">
+            </div>
+
+            <div class="flex items-center gap-3 bg-slate-950 p-3 sm:p-2.5 rounded-xl border border-slate-800 h-[46px] sm:h-[42px] cursor-pointer" onclick="this.querySelector('input').click()">
+              <input type="checkbox" id="vat-${prodId}" class="vat-checkbox w-5 h-5 sm:w-4 sm:h-4 accent-emerald-500 rounded cursor-pointer" ${hasVat ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleVatLabel(this)">
+              <label for="vat-${prodId}" class="vat-label text-sm sm:text-xs text-slate-200 font-medium cursor-pointer select-none">${hasVat ? 'с НДС' : 'без НДС'}</label>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.insertAdjacentHTML('beforeend', cardHtml);
+    });
+
+    // Одинарная нижняя панель после всего списка
+    const bottomPanelHtml = `
+      <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 gap-3 mt-6">
+        <span class="text-xs text-slate-400 flex items-center"><i class="fa-solid fa-circle-info text-emerald-400 mr-1.5 shrink-0"></i> Данные каталога загружены</span>
+        <button onclick="saveAllPrices()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Опубликовать все цены
+        </button>
+      </div>
+    `;
+    
+    container.insertAdjacentHTML('afterend', bottomPanelHtml);
+  }
+
+  async function saveAllPrices() {
+    const token = getToken();
+    if (!token) return alert('Введите токен доступа');
+
+    const productsData = {};
+
+    document.querySelectorAll('#products-list > div[data-product-id]').forEach(card => {
+      const id = card.getAttribute('data-product-id');
+      const price = card.querySelector('.price-input').value.trim();
+      const hasVat = card.querySelector('.vat-checkbox').checked;
+
+      productsData[id] = {
+        price: price || "100",
+        vatIncluded: hasVat
+      };
+    });
+
+    try {
+      let sha = '';
+      const getFileRes = await fetch(`https://api.github.com/repos/${SITE_REPO_OWNER}/${SITE_REPO_NAME}/contents/prices.json`, {
+        headers: { 'Authorization': `token ${token}` }
+      });
+      
+      if (getFileRes.ok) {
+        const fileData = await getFileRes.json();
+        sha = fileData.sha;
+      }
+
+      const jsonString = JSON.stringify(productsData, null, 2);
+      const contentBase64 = btoa(unescape(encodeURIComponent(jsonString)));
+
+      const putRes = await fetch(`https://api.github.com/repos/${SITE_REPO_OWNER}/${SITE_REPO_NAME}/contents/prices.json`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: 'CRM: Обновление цен каталога',
+          content: contentBase64,
+          sha: sha || undefined
+        })
+      });
+
+      if (putRes.ok) {
+        alert('✅ Прайс-лист успешно сохранен и опубликован!');
+      } else {
+        alert('❌ Ошибка сохранения. Проверьте ваш Personal Access Token.');
+      }
+
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка связи с GitHub API');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initAdmin);
+</script>
+</body>
+</html>

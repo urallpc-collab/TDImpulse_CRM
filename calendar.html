@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Календарь и Заметки — ТД Импульс CRM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-6 font-sans">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Шапка модуля -->
+    <header class="flex justify-between items-center border-b border-slate-800 pb-4">
+      <div class="flex items-center gap-4">
+        <a id="back-to-crm" href="index.html" class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:border-emerald-500/50 text-slate-400 hover:text-emerald-400 transition">
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div>
+          <h1 class="text-xl font-bold">Календарь и Планировщик</h1>
+          <p class="text-xs text-slate-400" id="user-info">Авторизация...</p>
+        </div>
+      </div>
+      <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i> Добавить заметку
+      </button>
+    </header>
+
+    <!-- Основной рабочий двухколоночный интерфейс -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- ЛЕВАЯ КОЛОНКА: Крупный Календарь (5 колонок из 12) -->
+      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+        
+        <!-- Шапка Календаря (Месяц / Год и стрелки) -->
+        <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
+          <h2 class="text-base font-bold text-slate-200 capitalize" id="calendar-month-year">Сентябрь 2026</h2>
+          <div class="flex gap-1">
+            <button onclick="changeMonth(-1)" class="p-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-slate-100 text-xs">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button onclick="changeMonth(1)" class="p-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-slate-100 text-xs">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Дни недели -->
+        <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-500 uppercase">
+          <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div class="text-rose-500/70">Сб</div><div class="text-rose-500/70">Вс</div>
+        </div>
+
+        <!-- Крупная Сетка Дней -->
+        <div class="grid grid-cols-7 gap-1.5" id="calendar-days-grid">
+          <!-- Дни генерируются через JS -->
+        </div>
+
+      </div>
+
+      <!-- ПРАВАЯ КОЛОНКА: Заметки на выбранный день (7 колонок из 12) -->
+      <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 flex flex-col justify-between">
+        
+        <div class="space-y-6">
+          <!-- Заголовок выбранной даты -->
+          <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+            <div>
+              <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-400">План на выбранную дату</span>
+              <h2 class="text-xl font-bold text-slate-100" id="selected-date-title">Загрузка...</h2>
+            </div>
+            <span class="text-xs text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800" id="selected-day-status">Сегодня</span>
+          </div>
+
+          <!-- Блок 1: Личные заметки -->
+          <div class="space-y-3">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Мои личные заметки
+            </h3>
+            <div class="space-y-2" id="personal-notes-container">
+              <!-- Карточка задачи -->
+              <div class="p-3 bg-slate-950 border border-slate-800/80 rounded-xl flex justify-between items-start">
+                <div>
+                  <p class="text-sm font-medium text-slate-200">📞 Звонок клиенту по кислоте - это как пример. Здесь личные заметки они всем видны не будут. Т.е. можно для себя отметить какое-то задание на определённое число. Можно будет щёлкать по числам смотреть задачи, удалять редактировать</p>
+                  <span class="text-[10px] text-emerald-400">11:00</span>
+                </div>
+                <button class="text-xs text-slate-600 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Блок 2: Общие события компании -->
+          <div class="space-y-3">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-blue-400"></span> Общие встречи и события
+            </h3>
+            <div class="space-y-2" id="company-notes-container">
+              <!-- Общая встреча -->
+              <div class="p-3 bg-slate-950 border border-blue-900/40 rounded-xl space-y-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-[10px] text-blue-400 font-bold uppercase">Собрание</span>
+                  <span class="text-[10px] text-slate-500">10:00</span>
+                </div>
+                <p class="text-sm text-slate-200 font-medium">👥 Тут будут общие объявления для всех троих. Пока что это просто пример/черновик, ничего не добавляется и не работает ( в разработке )</p>
+                <p class="text-[11px] text-slate-500">Автор: <strong class="text-slate-400">Ильгиз</strong></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+<script>
+  // Текущая дата и выбранная дата
+  let currentDate = new Date();
+  let selectedDate = new Date();
+
+  // Инициализация календаря
+  function renderCalendar() {
+    const grid = document.getElementById('calendar-days-grid');
+    grid.innerHTML = '';
+
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    // Название месяца
+    const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+    document.getElementById('calendar-month-year').innerText = `${monthNames[month]} ${year}`;
+
+    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Понедельник = 0
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    // Пустые ячейки для смещения начала месяца
+    for (let i = 0; i < firstDayIndex; i++) {
+      grid.innerHTML += `<div class="h-10 opacity-0"></div>`;
+    }
+
+    // Дни месяца
+    const today = new Date();
+    for (let day = 1; day <= totalDays; day++) {
+      const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+      const isSelected = day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
+
+      let classes = "h-11 rounded-xl font-bold text-xs flex flex-col items-center justify-center cursor-pointer transition relative ";
+      
+      if (isSelected) {
+        classes += "bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ";
+      } else if (isToday) {
+        classes += "bg-slate-800 text-emerald-400 border border-emerald-500/50 ";
+      } else {
+        classes += "bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800/80 ";
+      }
+
+      grid.innerHTML += `
+        <button onclick="selectDay(${day})" class="${classes}">
+          ${day}
+          <!-- Метка, если на день есть заметки -->
+          ${(day === 21 || day === 28) ? '<span class="w-1.5 h-1.5 rounded-full bg-blue-400 absolute bottom-1"></span>' : ''}
+        </button>
+      `;
+    }
+
+    updateSelectedDateDisplay();
+  }
+
+  function selectDay(day) {
+    selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    renderCalendar();
+  }
+
+  function changeMonth(delta) {
+    currentDate.setMonth(currentDate.getMonth() + delta);
+    renderCalendar();
+  }
+
+  function updateSelectedDateDisplay() {
+    const options = { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' };
+    document.getElementById('selected-date-title').innerText = selectedDate.toLocaleDateString('ru-RU', options);
+    
+    const today = new Date();
+    const isToday = selectedDate.toDateString() === today.toDateString();
+    document.getElementById('selected-day-status').innerText = isToday ? 'Сегодня' : 'Выбранная дата';
+  }
+
+  // При загрузке страницы
+  document.addEventListener('DOMContentLoaded', () => {
+    renderCalendar();
+  });
+</script>
+</body>
+</html>
