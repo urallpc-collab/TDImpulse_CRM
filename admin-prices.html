@@ -54,7 +54,7 @@
       <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 gap-3">
         <span class="text-xs text-slate-400 flex items-center"><i class="fa-solid fa-circle-info text-emerald-400 mr-1.5 shrink-0"></i> Данные каталога загружены</span>
         <button onclick="saveAllPrices()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95">
-          <i class="fa-solid fa-cloud-arrow-up"></i> Опубликовать все цены
+          <i class="fa-solid fa-cloud-arrow-up"></i> <span>Опубликовать все цены</span>
         </button>
       </div>
 
@@ -69,9 +69,42 @@
 
   </div>
 
+  <!-- Полноэкранная затеняющая плашка статуса -->
+  <div id="status-overlay" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="relative bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-6 sm:p-8 text-center shadow-2xl space-y-6">
+      
+      <!-- Крестик для закрытия -->
+      <button onclick="closeOverlay()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-100 bg-slate-800/50 hover:bg-slate-800 rounded-full transition">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+
+      <!-- Анимированный лоадер -->
+      <div class="flex justify-center pt-2">
+        <div id="overlay-icon-box" class="relative w-20 h-20 flex items-center justify-center bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">
+          <i id="overlay-icon" class="fa-solid fa-cloud-arrow-up text-3xl animate-bounce"></i>
+        </div>
+      </div>
+
+      <!-- Текстовый статус -->
+      <div class="space-y-2">
+        <div id="overlay-step" class="text-xs font-bold uppercase tracking-wider text-blue-400">1/3 Отправка</div>
+        <h3 id="overlay-title" class="text-lg font-bold text-slate-100">Отправляю новые цены...</h3>
+        <p id="overlay-desc" class="text-xs text-slate-400 leading-relaxed">Запись изменений в репозиторий GitHub</p>
+      </div>
+
+      <!-- Состояние сборки -->
+      <div class="pt-2 border-t border-slate-800/80">
+        <span id="overlay-timer" class="text-[11px] font-mono text-slate-500">Время ожидания: 0 с</span>
+      </div>
+
+    </div>
+  </div>
+
 <script>
   const SITE_REPO_OWNER = 'TDImpulse';
   const SITE_REPO_NAME = 'tdimpulse.github.io';
+  let timerInterval = null;
+  let timerSeconds = 0;
 
   function validateMinPrice(input) {
     let val = parseInt(input.value);
@@ -234,7 +267,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-end">
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5">Цена (руб/т)</label>
-              <input type="number" min="0" value="${priceVal}" onfocus="this.select()" oninput="validateMinPrice(this)" class="price-input w-full p-3 sm:p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-base sm:text-sm font-semibold ${isZero ? 'text-amber-400' : 'text-emerald-400'} focus:outline-none focus:border-emerald-500" placeholder="0">
+              <input type="number" min="0" value="${priceVal}" data-initial-value="${priceVal}" onfocus="this.select()" oninput="validateMinPrice(this)" class="price-input w-full p-3 sm:p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-base sm:text-sm font-semibold ${isZero ? 'text-amber-400' : 'text-emerald-400'} focus:outline-none focus:border-emerald-500" placeholder="0">
             </div>
 
             <div class="flex items-center justify-center sm:justify-start gap-3 bg-slate-950 p-3 sm:p-2.5 rounded-xl border border-slate-800 h-[46px] sm:h-[42px] cursor-pointer" onclick="const cb = this.querySelector('.vat-checkbox'); if(cb && !cb.classList.contains('hidden')) cb.click()">
@@ -252,7 +285,7 @@
       <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 gap-3 mt-6">
         <span class="text-xs text-slate-400 flex items-center"><i class="fa-solid fa-circle-info text-emerald-400 mr-1.5 shrink-0"></i> Данные каталога загружены</span>
         <button onclick="saveAllPrices()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95">
-          <i class="fa-solid fa-cloud-arrow-up"></i> Опубликовать все цены
+          <i class="fa-solid fa-cloud-arrow-up"></i> <span>Опубликовать все цены</span>
         </button>
       </div>
     `;
@@ -260,24 +293,91 @@
     container.insertAdjacentHTML('afterend', bottomPanelHtml);
   }
 
-  async function saveAllPrices() {
+  // Функции работы с полноэкранной плашкой
+  function updateOverlay(step, title, desc, iconClass, colorTheme) {
+    document.getElementById('overlay-step').textContent = step;
+    document.getElementById('overlay-title').textContent = title;
+    document.getElementById('overlay-desc').textContent = desc;
+    
+    const iconEl = document.getElementById('overlay-icon');
+    const iconBox = document.getElementById('overlay-icon-box');
+
+    iconEl.className = `fa-solid ${iconClass} text-3xl`;
+
+    if (colorTheme === 'blue') {
+      document.getElementById('overlay-step').className = 'text-xs font-bold uppercase tracking-wider text-blue-400';
+      iconBox.className = 'relative w-20 h-20 flex items-center justify-center bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20';
+    } else if (colorTheme === 'amber') {
+      document.getElementById('overlay-step').className = 'text-xs font-bold uppercase tracking-wider text-amber-400';
+      iconBox.className = 'relative w-20 h-20 flex items-center justify-center bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20';
+    } else if (colorTheme === 'emerald') {
+      document.getElementById('overlay-step').className = 'text-xs font-bold uppercase tracking-wider text-emerald-400';
+      iconBox.className = 'relative w-20 h-20 flex items-center justify-center bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20';
+    } else if (colorTheme === 'rose') {
+      document.getElementById('overlay-step').className = 'text-xs font-bold uppercase tracking-wider text-rose-400';
+      iconBox.className = 'relative w-20 h-20 flex items-center justify-center bg-rose-500/10 text-rose-400 rounded-full border border-rose-500/20';
+    }
+  }
+
+  function startOverlayTimer() {
+    timerSeconds = 0;
+    clearInterval(timerInterval);
+    document.getElementById('overlay-timer').textContent = 'Время ожидания: 0 с';
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      document.getElementById('overlay-timer').textContent = `Время ожидания: ${timerSeconds} с`;
+    }, 1000);
+  }
+
+  function closeOverlay() {
+    clearInterval(timerInterval);
+    document.getElementById('status-overlay').classList.add('hidden');
+  }
+
+async function saveAllPrices() {
     const token = getToken();
     if (!token) return alert('Введите токен доступа');
 
-    const productsData = {};
+    document.getElementById('status-overlay').classList.remove('hidden');
+    startOverlayTimer();
 
-    document.querySelectorAll('#products-list > div[data-product-id]').forEach(card => {
+    // -------------------------------------------------------------
+    // ЭТАП 0: Находим измененный товар и запоминаем ЕГО ТЕКУЩИЙ HTML
+    // -------------------------------------------------------------
+    updateOverlay('Подготовка', 'Анализ изменений...', 'Считываем текущую страницу витрины...', 'fa-magnifying-glass animate-pulse', 'amber');
+
+    const productsData = {};
+    let targetProductId = null;
+    let targetProductUrl = null;
+    let expectedPriceVal = null;
+
+    const cards = document.querySelectorAll('#products-list > div[data-product-id]');
+    
+    cards.forEach((card) => {
       const id = card.getAttribute('data-product-id');
-      const priceInput = card.querySelector('.price-input').value.trim();
-      const val = parseInt(priceInput);
+      const url = card.getAttribute('data-product-url');
+      const priceInput = card.querySelector('.price-input');
+      const val = parseInt(priceInput.value.trim());
       const price = (isNaN(val) || val <= 0) ? "0" : String(val);
       const hasVat = card.querySelector('.vat-checkbox').checked;
 
-      productsData[id] = {
-        price: price,
-        vatIncluded: hasVat
-      };
+      productsData[id] = { price: price, vatIncluded: hasVat };
+
+      const initialVal = priceInput.getAttribute('data-initial-value');
+      if (initialVal !== price || !targetProductId) {
+        targetProductId = id;
+        targetProductUrl = url;
+        expectedPriceVal = price;
+      }
     });
+
+    // Запоминаем текущий HTML страницы ДО отправки
+    const initialPageHtml = await fetchCurrentPageHtml(targetProductUrl);
+
+    // -------------------------------------------------------------
+    // ЭТАП 1: Отправка нового prices.json на GitHub
+    // -------------------------------------------------------------
+    updateOverlay('1/3 Отправка', 'Отправляю новые цены...', 'Запись файла prices.json через GitHub API', 'fa-paper-plane animate-pulse', 'amber');
 
     try {
       let sha = '';
@@ -306,16 +406,102 @@
         })
       });
 
-      if (putRes.ok) {
-        alert('✅ Прайс-лист успешно сохранен и опубликован!');
+      if (!putRes.ok) {
+        updateOverlay('Ошибка', 'Не удалось сохранить', 'Проверьте токен доступа', 'fa-triangle-exclamation', 'rose');
+        return;
+      }
+
+      // -------------------------------------------------------------
+      // ЭТАП 2: Ждем, когда обновится prices.json на сервере
+      // -------------------------------------------------------------
+      updateOverlay('2/3 Сервер', 'Ожидаем изменения цен каталога', 'Проверяем обновление файла цен на tdimpulse.ru...', 'fa-circle-notch fa-spin', 'blue');
+
+      const isJsonReady = await waitForJsonUpdate(targetProductId, expectedPriceVal);
+
+      if (!isJsonReady) {
+        updateOverlay('Завершено', 'Файл сохранен', 'GitHub принял изменения, витрина обновится через несколько секунд', 'fa-clock', 'amber');
+        return;
+      }
+
+      // -------------------------------------------------------------
+      // ЭТАП 3: Опрашиваем HTML страницы каждые 5 сек (ждем изменений)
+      // -------------------------------------------------------------
+      updateOverlay('2/3 Проверка витрины', 'Отрисовка карточек товара', `Проверяем изменения на странице ${targetProductUrl}...`, 'fa-circle-notch fa-spin', 'blue');
+
+      const isPageChanged = await waitForHtmlPageChange(targetProductUrl, initialPageHtml);
+
+      if (isPageChanged) {
+        // Запоминаем текущее значение инпута как начальное
+        document.querySelectorAll('#products-list > div[data-product-id]').forEach(card => {
+          const inp = card.querySelector('.price-input');
+          if (inp) inp.setAttribute('data-initial-value', inp.value.trim());
+        });
+
+        updateOverlay('3/3 Готово!', 'Сайт полностью обновлен!', 'Новые ценники уже отображаются на страницах товаров', 'fa-check', 'emerald');
+        setTimeout(() => closeOverlay(), 2500);
       } else {
-        alert('❌ Ошибка сохранения. Проверьте ваш Personal Access Token.');
+        updateOverlay('Завершено', 'Файл сохранен', 'JSON обновился, витрина обновится через несколько секунд', 'fa-clock', 'amber');
       }
 
     } catch (e) {
       console.error(e);
-      alert('Ошибка связи с GitHub API');
+      updateOverlay('Ошибка', 'Сбой сети', 'Не удалось проверить статус', 'fa-wifi', 'rose');
     }
+  }
+
+  // Вспомогательная функция: Скачивает текущий HTML код страницы
+  async function fetchCurrentPageHtml(pageUrl) {
+    const fullUrl = pageUrl.startsWith('http') ? pageUrl : `https://tdimpulse.ru/${pageUrl}`;
+    try {
+      const res = await fetch(`${fullUrl}?init_check=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        return await res.text();
+      }
+    } catch (e) {
+      console.warn('Не удалось прочитать исходную страницу', e);
+    }
+    return '';
+  }
+
+  // ЭТАП 2: Ждем обновление JSON на боевом домене
+  async function waitForJsonUpdate(productId, expectedPrice, maxAttempts = 15) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      try {
+        const res = await fetch(`https://tdimpulse.ru/prices.json?t=${Date.now()}_${attempt}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data[productId] && String(data[productId].price) === String(expectedPrice)) {
+            return true;
+          }
+        }
+      } catch (e) {}
+    }
+    return false;
+  }
+
+  // ЭТАП 3: Опрашиваем страницу каждые 5 секунд и сравниваем со старым HTML
+  async function waitForHtmlPageChange(pageUrl, oldHtml, maxAttempts = 20) {
+    const fullUrl = pageUrl.startsWith('http') ? pageUrl : `https://tdimpulse.ru/${pageUrl}`;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Интервал ровно 5 секунд
+
+      try {
+        const res = await fetch(`${fullUrl}?cache_bust=${Date.now()}_${attempt}`, { cache: 'no-store' });
+        if (res.ok) {
+          const currentHtml = await res.text();
+
+          // Если сохраненный старый HTML и новый полученный HTML РАЗНЫЕ — страница обновилась!
+          if (oldHtml && currentHtml !== oldHtml) {
+            return true;
+          }
+        }
+      } catch (e) {
+        console.warn('Ожидание смены HTML...', e);
+      }
+    }
+    return false;
   }
 
   document.addEventListener('DOMContentLoaded', initAdmin);
