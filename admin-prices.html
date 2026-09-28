@@ -74,16 +74,48 @@
   const SITE_REPO_NAME = 'tdimpulse.github.io';
 
   function validateMinPrice(input) {
-    let val = parseInt(input.value) || 0;
-    if (val < 100) input.value = 100;
+    let val = parseInt(input.value);
+    if (isNaN(val) || val < 0) {
+      val = 0;
+    }
+    
+    const card = input.closest('[data-product-id]');
+    if (!card) return;
+    
+    const vatCheckbox = card.querySelector('.vat-checkbox');
+    const vatLabel = card.querySelector('.vat-label');
+
+    if (val === 0) {
+      input.classList.remove('text-emerald-400');
+      input.classList.add('text-amber-400');
+      if (vatCheckbox) vatCheckbox.classList.add('hidden');
+      if (vatLabel) {
+        vatLabel.textContent = 'ДОГОВОРНАЯ';
+        vatLabel.className = 'vat-label text-xs font-bold text-amber-400 tracking-wider uppercase select-none';
+      }
+    } else {
+      input.classList.remove('text-amber-400');
+      input.classList.add('text-emerald-400');
+      if (vatCheckbox) vatCheckbox.classList.remove('hidden');
+      if (vatLabel) {
+        vatLabel.textContent = vatCheckbox.checked ? 'с НДС' : 'без НДС';
+        vatLabel.className = 'vat-label text-sm sm:text-xs text-slate-200 font-medium cursor-pointer select-none';
+      }
+    }
   }
 
   function toggleVatLabel(checkbox) {
-    const label = checkbox.parentElement.querySelector('.vat-label');
-    label.textContent = checkbox.checked ? 'с НДС' : 'без НДС';
+    const card = checkbox.closest('[data-product-id]');
+    const priceInput = card ? card.querySelector('.price-input') : null;
+    const val = priceInput ? parseInt(priceInput.value) : 0;
+    
+    if (val > 0) {
+      const label = checkbox.parentElement.querySelector('.vat-label');
+      label.textContent = checkbox.checked ? 'с НДС' : 'без НДС';
+    }
   }
 
-function getToken() { 
+  function getToken() { 
     return localStorage.getItem('crm_github_token') || localStorage.getItem('gh_pat_token') || localStorage.getItem('price_admin_token') || ''; 
   }
 
@@ -99,10 +131,8 @@ function getToken() {
     }
   }
 
-  // Загрузка catalog.html без API (напрямую)
   async function fetchProductsFromCatalog() {
     let htmlText = '';
-
     const sources = [
       'catalog.html?t=' + Date.now(),
       'https://raw.githubusercontent.com/TDImpulse/tdimpulse.github.io/main/catalog.html',
@@ -126,18 +156,14 @@ function getToken() {
         const match = htmlText.match(/(?:const|let|var)\s+(?:products|catalog|items|productsData)\s*=\s*(\[\s*[\s\S]*?\]);/i);
         if (match && match[1]) {
           return Function('"use strict";return (' + match[1] + ')')();
-        } else {
-          console.error('Массив товаров не найден в catalog.html');
         }
       } catch (e) {
         console.error('Ошибка вычисления массива:', e);
       }
     }
-
     return [];
   }
 
-  // Чтение текущих цен из prices.json
   async function fetchCurrentPrices() {
     const timestamp = Date.now();
     const sources = [
@@ -156,8 +182,6 @@ function getToken() {
         console.warn(`Не удалось прочитать prices.json с ${url}`);
       }
     }
-
-    console.warn('prices.json не найден ни по одной ссылке, будут использованы базовые значения.');
     return {};
   }
 
@@ -192,7 +216,8 @@ function getToken() {
       const fullWebUrl = `https://tdimpulse.ru/${cleanFileName}`;
 
       const savedData = existingPrices[prodId] || {};
-      const priceVal = savedData.price || "";
+      const priceVal = savedData.price !== undefined ? savedData.price : "0";
+      const isZero = parseInt(priceVal) === 0 || priceVal === "";
       const hasVat = savedData.vatIncluded !== undefined ? savedData.vatIncluded : true;
 
       const cardHtml = `
@@ -209,12 +234,12 @@ function getToken() {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-end">
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1.5">Цена (руб/т)</label>
-              <input type="number" min="100" value="${priceVal}" onchange="validateMinPrice(this)" class="price-input w-full p-3 sm:p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-base sm:text-sm font-semibold text-emerald-400 focus:outline-none focus:border-emerald-500" placeholder="Укажите цену">
+              <input type="number" min="0" value="${priceVal}" onfocus="this.select()" oninput="validateMinPrice(this)" class="price-input w-full p-3 sm:p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-base sm:text-sm font-semibold ${isZero ? 'text-amber-400' : 'text-emerald-400'} focus:outline-none focus:border-emerald-500" placeholder="0">
             </div>
 
-            <div class="flex items-center gap-3 bg-slate-950 p-3 sm:p-2.5 rounded-xl border border-slate-800 h-[46px] sm:h-[42px] cursor-pointer" onclick="this.querySelector('input').click()">
-              <input type="checkbox" id="vat-${prodId}" class="vat-checkbox w-5 h-5 sm:w-4 sm:h-4 accent-emerald-500 rounded cursor-pointer" ${hasVat ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleVatLabel(this)">
-              <label for="vat-${prodId}" class="vat-label text-sm sm:text-xs text-slate-200 font-medium cursor-pointer select-none">${hasVat ? 'с НДС' : 'без НДС'}</label>
+            <div class="flex items-center justify-center sm:justify-start gap-3 bg-slate-950 p-3 sm:p-2.5 rounded-xl border border-slate-800 h-[46px] sm:h-[42px] cursor-pointer" onclick="const cb = this.querySelector('.vat-checkbox'); if(cb && !cb.classList.contains('hidden')) cb.click()">
+              <input type="checkbox" id="vat-${prodId}" class="vat-checkbox w-5 h-5 sm:w-4 sm:h-4 accent-emerald-500 rounded cursor-pointer ${isZero ? 'hidden' : ''}" ${hasVat ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleVatLabel(this)">
+              <label for="vat-${prodId}" class="vat-label select-none ${isZero ? 'text-xs font-bold text-amber-400 tracking-wider uppercase' : 'text-sm sm:text-xs text-slate-200 font-medium cursor-pointer'}">${isZero ? 'ДОГОВОРНАЯ' : (hasVat ? 'с НДС' : 'без НДС')}</label>
             </div>
           </div>
         </div>
@@ -223,7 +248,6 @@ function getToken() {
       container.insertAdjacentHTML('beforeend', cardHtml);
     });
 
-    // Одинарная нижняя панель после всего списка
     const bottomPanelHtml = `
       <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 gap-3 mt-6">
         <span class="text-xs text-slate-400 flex items-center"><i class="fa-solid fa-circle-info text-emerald-400 mr-1.5 shrink-0"></i> Данные каталога загружены</span>
@@ -244,11 +268,13 @@ function getToken() {
 
     document.querySelectorAll('#products-list > div[data-product-id]').forEach(card => {
       const id = card.getAttribute('data-product-id');
-      const price = card.querySelector('.price-input').value.trim();
+      const priceInput = card.querySelector('.price-input').value.trim();
+      const val = parseInt(priceInput);
+      const price = (isNaN(val) || val <= 0) ? "0" : String(val);
       const hasVat = card.querySelector('.vat-checkbox').checked;
 
       productsData[id] = {
-        price: price || "100",
+        price: price,
         vatIncluded: hasVat
       };
     });
